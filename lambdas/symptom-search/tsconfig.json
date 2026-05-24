@@ -1,0 +1,9 @@
+{
+  "extends": "@med-check/tsconfig/lambda.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

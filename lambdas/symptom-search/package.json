@@ -1,0 +1,24 @@
+{
+  "name": "@med-check/lambda-symptom-search",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "@med-check/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "@med-check/eslint-config": "workspace:*",
+    "@med-check/tsconfig": "workspace:*"
+  }
+}
