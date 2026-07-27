@@ -8,6 +8,9 @@
       "outputs": ["dist/**"]
     },
     "dev": {
+      // Workspace deps (@med-check/types) must be built before the API,
+      // Lambdas, or mobile app can compile against them.
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },

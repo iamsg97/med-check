@@ -1,0 +1,17 @@
+{
+  "name": "@med-check/status",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local dashboard showing deployment version and health for every module in the monorepo.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"console.log('@med-check/status is static — nothing to build')\"",
+    "lint": "eslint \"**/*.js\" --ignore-pattern node_modules",
+    "type-check": "node -e \"console.log('@med-check/status is plain JS — nothing to type-check')\"",
+    "clean": "rm -rf .cache"
+  },
+  "devDependencies": {
+    "@med-check/eslint-config": "workspace:*"
+  }
+}

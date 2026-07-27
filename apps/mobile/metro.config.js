@@ -3,6 +3,7 @@
 // app-local and hoisted root node_modules. Without this, Metro (run from
 // apps/mobile) can't resolve hoisted dependencies like expo-router.
 const { getDefaultConfig } = require("expo/metro-config");
+const exclusionList = require("metro-config/private/defaults/exclusionList").default;
 const path = require("path");
 
 const projectRoot = __dirname;
@@ -16,5 +17,17 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 config.resolver.disableHierarchicalLookup = true;
+
+// The mobile app only needs packages/* (workspace deps) from the rest of the
+// monorepo. Without this, Metro's watcher/crawler walks apps/api, lambdas/*,
+// .git, and .turbo too, which massively slows (or on Windows without
+// Watchman, can appear to hang) the first bundle.
+config.resolver.blockList = exclusionList([
+  /apps[/\\]api[/\\].*/,
+  /lambdas[/\\].*/,
+  /\.git[/\\].*/,
+  /\.turbo[/\\].*/,
+  /\.idea[/\\].*/,
+]);
 
 module.exports = config;

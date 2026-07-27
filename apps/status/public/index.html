@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MedCheck — Status</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__title">
+        <h1>MedCheck <span>status</span></h1>
+        <p id="git-info" class="topbar__git">—</p>
+      </div>
+      <div class="topbar__actions">
+        <span id="last-updated" class="muted">Loading…</span>
+        <label class="toggle">
+          <input type="checkbox" id="auto-refresh" checked />
+          Auto-refresh
+        </label>
+        <button id="refresh-btn" type="button">Refresh</button>
+        <span id="user-info" class="muted"></span>
+        <a class="button button--ghost" href="/auth/logout">Sign out</a>
+      </div>
+    </header>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <main id="groups"></main>
+
+    <footer class="footer">
+      <p>
+        Local dashboard only — nothing here is exposed outside your machine. GitHub sign-in
+        (restricted to a single account) is on the roadmap; see the app README.
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

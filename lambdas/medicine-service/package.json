@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc",
+    "dev": "tsc && node dist/local-server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
