@@ -4,7 +4,30 @@ NestJS REST API — the mobile-facing backend for MedCheck.
 
 ## Overview
 
-This service is the single entry point for the mobile app. It handles JWT validation (Cognito), orchestrates DynamoDB reads/writes, triggers async Lambda invocations, and proxies requests to Bedrock and Textract.
+The single entry point for the mobile app, and the gateway in front of the
+Lambda compute layer. It validates the Cognito JWT, then **routes each REST call
+to the Lambda that owns it** — it does not talk to DynamoDB, Bedrock, or
+Textract itself.
+
+```
+Mobile → NestJS (this app) → Lambda → DynamoDB / Bedrock / Textract / S3
+```
+
+Business logic belongs in the Lambdas. Controllers here stay thin: build an
+`APIGatewayProxyEvent`, invoke, translate the `APIGatewayProxyResult` back to
+HTTP. That keeps a Lambda's behaviour identical whether this gateway or real
+API Gateway invokes it.
+
+### Lambda transport
+
+`LAMBDA_INVOKER` picks how Lambdas are reached:
+
+| Value  | Invoker             | Behaviour                                        |
+|--------|---------------------|--------------------------------------------------|
+| `http` | `HttpLambdaInvoker` | Forwards to a Lambda's local dev server (default) |
+| `aws`  | `AwsLambdaInvoker`  | Real `InvokeCommand`, `RequestResponse`           |
+
+See `src/lambda/` and `.env.example`.
 
 ## Endpoints
 
@@ -24,14 +47,12 @@ Full request/response shapes are documented in `CLAUDE.md` § Request / Response
 | Concern | Library |
 |---|---|
 | Framework | NestJS 10 |
-| Auth | Passport JWT + `jwks-rsa` (Cognito JWKS) |
-| Database | AWS SDK v3 — DynamoDB (DocumentClient) |
-| Storage | AWS SDK v3 — S3 presigned URLs |
-| OCR | AWS SDK v3 — Textract |
-| AI | AWS SDK v3 — Bedrock Runtime |
-| Async invocation | AWS SDK v3 — Lambda (InvokeAsync) |
-| ID generation | `ulid` |
+| Auth | Passport JWT + `jwks-rsa` (Cognito JWKS) — *currently stubbed* |
+| Lambda invocation | AWS SDK v3 — Lambda (`InvokeCommand`) |
 | API docs | `@nestjs/swagger` (OpenAPI) |
+
+DynamoDB, S3, Textract, Bedrock and `ulid` are dependencies of the **Lambdas**,
+not of this gateway.
 
 ## Planned Module Structure
 
@@ -53,21 +74,16 @@ src/
 
 ```bash
 pnpm install
+cp apps/api/.env.example apps/api/.env.local
+
+# Whole stack (API + Lambda dev servers + Expo):
+pnpm dev
+
+# Or this gateway alone — needs medicine-service running on :4000:
 pnpm --filter @med-check/api dev
 ```
 
-Requires an `.env` file with:
-```
-PORT=3000
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-COGNITO_USER_POOL_ID=...
-COGNITO_CLIENT_ID=...
-DYNAMODB_TABLE_USERS=med-check-users
-DYNAMODB_TABLE_MEDICINES=med-check-medicines
-DYNAMODB_TABLE_AI_CACHE=med-check-ai-cache
-DYNAMODB_TABLE_REMINDERS=med-check-reminders
-S3_BUCKET_PHOTOS=med-check-photos
-BEDROCK_MODEL_ID=anthropic.claude-haiku-20240307-v1:0
-```
+Config lives in `.env.example`. In `http` mode the only required values are
+`LAMBDA_URL_*`; the DynamoDB / S3 / Bedrock settings belong to the Lambdas.
+
+Health check: `GET http://localhost:3000/v1/health`

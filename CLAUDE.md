@@ -22,7 +22,8 @@ Full backend on **AWS Serverless** (Lambda + DynamoDB + Bedrock).
 |------------------|-----------------------------------|
 | Mobile           | React Native (Expo)               |
 | Auth             | AWS Cognito (Google + Apple OAuth)|
-| API              | AWS API Gateway (REST, JWT auth)  |
+| Edge             | AWS API Gateway (REST, JWT auth)  |
+| API / Gateway    | NestJS (`apps/api`) — routes to Lambdas |
 | Compute          | AWS Lambda (4 functions)          |
 | Database         | AWS DynamoDB (4 tables)           |
 | AI / LLM         | AWS Bedrock (Claude Haiku)        |
@@ -42,6 +43,12 @@ React Native App
   API Gateway (REST, Bearer token)
       │
   ┌───────────────────────────────┐
+  │   NestJS API  (apps/api)      │
+  │   Routes each REST call to    │
+  │   the owning Lambda           │
+  └───────────────────────────────┘
+      │
+  ┌───────────────────────────────┐
   │         Lambda Functions      │
   │  ① Medicine CRUD              │
   │  ② AI Enrichment (Bedrock)   │
@@ -55,6 +62,25 @@ React Native App
       │
   EventBridge → SNS → FCM (push)
 ```
+
+### The NestJS ↔ Lambda boundary
+
+`apps/api` does exactly what API Gateway does: it turns an HTTP request into an
+**`APIGatewayProxyEvent`**, invokes the owning Lambda, and turns the returned
+`APIGatewayProxyResult` back into an HTTP response. Because that payload shape is
+the contract, a Lambda behaves identically whether NestJS or real API Gateway
+calls it.
+
+Transport is selected by `LAMBDA_INVOKER`:
+
+| Value  | Invoker             | Used for                                       |
+|--------|---------------------|------------------------------------------------|
+| `http` | `HttpLambdaInvoker` | Local dev — forwards to each Lambda's dev server |
+| `aws`  | `AwsLambdaInvoker`  | Deployed — real `InvokeCommand` (`RequestResponse`) |
+
+**All business logic lives in the Lambdas.** The Nest controllers stay thin —
+no validation, no persistence — so nothing breaks if API Gateway is ever pointed
+straight at a Lambda.
 
 ---
 
@@ -281,6 +307,41 @@ Do not include markdown or explanation outside the JSON.
 
 ---
 
+## Running Locally
+
+```bash
+pnpm install
+cp apps/api/.env.example apps/api/.env.local
+pnpm dev          # types build → API :3000, medicine-service :4000, Expo :8081
+```
+
+| Process | Port | What it is |
+|---|---|---|
+| `@med-check/mobile` | 8081 | Expo / Metro |
+| `@med-check/api` | 3000 | NestJS gateway, base path `/v1` |
+| `@med-check/lambda-medicine-service` | 4000 | `local-server.ts` — stands in for the Lambda runtime |
+
+`local-server.ts` is **dev-only and never deployed**. It replays an incoming
+request through the same handler API Gateway would invoke, so handler code needs
+no local/AWS branching.
+
+The app derives the API host from Expo's `hostUri` (the machine already serving
+Metro), so a physical device and an emulator both resolve it without a
+hardcoded IP. Override with `EXPO_PUBLIC_API_URL`.
+
+### Current local shortcuts
+
+Both are opt-in via env so a deployed stage can never inherit them:
+
+- **Storage is in-memory** (`InMemoryMedicineRepository`) — the cabinet empties
+  when the Lambda dev server restarts. Swap in the DynamoDB implementation
+  behind `MedicineRepository`; no handler changes needed.
+- **Auth is stubbed** — `ALLOW_DEV_USER=true` runs every request as
+  `DEV_USER_ID`. Without it, requests 401. Replace `AuthGuard.resolve()` and
+  `lambdas/*/src/auth.ts` with real Cognito JWT verification.
+
+---
+
 ## V1 Scope (MVP)
 
 - [x] User auth (Google/Apple)
@@ -290,6 +351,18 @@ Do not include markdown or explanation outside the JSON.
 - [x] Symptom search
 - [x] Dosage reminders
 - [x] AI response caching
+
+### Implementation status
+
+| Feature | State |
+|---|---|
+| Medicine CRUD (Lambda + gateway + app) | Built — in-memory store |
+| Add-medicine form → dashboard | Built |
+| Sage Serenity theming | Built |
+| Auth (Cognito) | Stubbed dev user |
+| DynamoDB persistence | Not started — repository seam ready |
+| AI enrichment | Not started — `requestEnrichment()` is a no-op stub |
+| Photo OCR, symptom search, reminders | Not started |
 
 ## V2 Roadmap
 
